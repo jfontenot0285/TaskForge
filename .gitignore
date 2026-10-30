@@ -1,0 +1,17 @@
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+
+# Django local database
+db.sqlite3
+
+# Environment variables
+.env
+
+# PyCharm
+.idea/
+db.sqlite3
