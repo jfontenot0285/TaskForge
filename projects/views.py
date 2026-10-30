@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Project
@@ -16,7 +17,7 @@ def project_list(request):
 
                 return Response(serializer.data)
 
-        else:
+        else: # POST tells serializer to default to create without instance argument
                 serializer = ProjectSerializer(data=request.data)
 
                 if serializer.is_valid():
@@ -30,3 +31,32 @@ def project_list(request):
                         serializer.errors,
                         status=status.HTTP_400_BAD_REQUEST
                 )
+
+@api_view(["PUT", "PATCH"])
+def project_detail(request, pk):
+        project = get_object_or_404(Project, pk=pk)
+
+        if request.method == 'PATCH': # instance arg tells serializer to update existing record
+                serializer = ProjectSerializer(
+                        instance=project,
+                        data=request.data,
+                        partial=True
+                )
+
+        else:
+                serializer = ProjectSerializer(
+                        instance=project,
+                        data=request.data,
+                )
+
+        if serializer.is_valid():
+                serializer.save()
+                return Response(
+                        serializer.data,
+                        status=status.HTTP_200_OK
+                )
+
+        return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+        )
