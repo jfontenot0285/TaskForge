@@ -32,31 +32,25 @@ def project_list(request):
                         status=status.HTTP_400_BAD_REQUEST
                 )
 
-@api_view(["PUT", "PATCH"])
+@api_view(["PUT", "PATCH", "DELETE"])
 def project_detail(request, pk):
-        project = get_object_or_404(Project, pk=pk)
+    project = get_object_or_404(Project, pk=pk)
 
-        if request.method == 'PATCH': # instance arg tells serializer to update existing record
-                serializer = ProjectSerializer(
-                        instance=project,
-                        data=request.data,
-                        partial=True
-                )
+    if request.method == "DELETE":
+        project.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-        else:
-                serializer = ProjectSerializer(
-                        instance=project,
-                        data=request.data,
-                )
+    serializer = ProjectSerializer(
+        instance=project,
+        data=request.data,
+        partial=(request.method == "PATCH")
+    )
 
-        if serializer.is_valid():
-                serializer.save()
-                return Response(
-                        serializer.data,
-                        status=status.HTTP_200_OK
-                )
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST
-        )
+    return Response(
+        serializer.errors,
+        status=status.HTTP_400_BAD_REQUEST
+    )
