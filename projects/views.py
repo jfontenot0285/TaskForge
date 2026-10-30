@@ -1,6 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import Project
+from .serializers import ProjectSerializer
 
 @api_view(['GET'])
 def hello(request):
@@ -9,14 +10,6 @@ def hello(request):
 @api_view(["GET"])
 def project_list(project):
         projects = Project.objects.all()
+        serializer = ProjectSerializer(projects, many=True)
 
-        data = [
-                {
-                        "id": project.id,
-                        "name": project.name,
-                        "description": project.description,
-                }
-                for project in projects
-        ]
-
-        return Response(data)
+        return Response(serializer.data)
