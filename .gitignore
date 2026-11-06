@@ -15,3 +15,7 @@ atlas-credentials.env
 
 # PyCharm
 .idea/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/

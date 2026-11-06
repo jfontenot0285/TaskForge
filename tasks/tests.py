@@ -31,7 +31,8 @@ class TaskAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["title"], "Write tests")
-        self.assertEqual(response.data["status"], Task.Status.TODO)
+        self.assertEqual(response.data["status"], Task.Status.NEW)
+        self.assertEqual(response.data["priority"], Task.Priority.MEDIUM)
         self.assertEqual(response.data["assignee"], "alice")
         self.assertEqual(response.data["projects"], [])
         self.assertEqual(Task.objects.get().assignee, self.user)
@@ -101,20 +102,22 @@ class TaskAPITests(APITestCase):
         task = Task.objects.create(title="Draft", assignee=self.user)
         response = self.client.patch(
             f"/api/tasks/{task.pk}/",
-            {"status": Task.Status.DONE},
+            {"status": Task.Status.DONE, "priority": Task.Priority.HIGH},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["status"], Task.Status.DONE)
+        self.assertEqual(response.data["priority"], Task.Priority.HIGH)
         task.refresh_from_db()
         self.assertEqual(task.status, Task.Status.DONE)
+        self.assertEqual(task.priority, Task.Priority.HIGH)
 
     def test_cannot_update_other_users_task(self):
         task = Task.objects.create(title="Bob task", assignee=self.other)
         response = self.client.patch(
             f"/api/tasks/{task.pk}/",
-            {"status": Task.Status.DONE},
+            {"status": Task.Status.DONE, "priority": Task.Priority.HIGH},
             format="json",
         )
 

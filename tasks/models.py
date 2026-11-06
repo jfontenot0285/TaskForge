@@ -4,16 +4,26 @@ from django.db import models
 
 class Task(models.Model):
     class Status(models.TextChoices):
-        TODO = "todo", "To do"
+        NEW = "new", "New"
         IN_PROGRESS = "in_progress", "In progress"
         DONE = "done", "Done"
+
+    class Priority(models.TextChoices):
+        LOW = "low", "Low"
+        MEDIUM = "medium", "Medium"
+        HIGH = "high", "High"
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.TODO,
+        default=Status.NEW,
+    )
+    priority = models.CharField(
+        max_length=10,
+        choices=Priority.choices,
+        default=Priority.MEDIUM,
     )
     assignee = models.ForeignKey(
         settings.AUTH_USER_MODEL,

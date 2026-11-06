@@ -22,6 +22,26 @@ class AuthAPITests(APITestCase):
         self.assertEqual(me.status_code, status.HTTP_200_OK)
         self.assertEqual(me.data["username"], "alice")
 
+    def test_register_password_too_short(self):
+        response = self.client.post(
+            "/api/auth/register/",
+            {"username": "alice", "password": "Ab1"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_register_password_needs_a_number(self):
+        response = self.client.post(
+            "/api/auth/register/",
+            {"username": "alice", "password": "abcdefgh"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(User.objects.count(), 0)
+
     def test_register_duplicate_username(self):
         User.objects.create_user(username="alice", password=PASSWORD)
         response = self.client.post(
