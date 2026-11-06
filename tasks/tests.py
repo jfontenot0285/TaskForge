@@ -49,7 +49,7 @@ class TaskAPITests(APITestCase):
         self.assertEqual(Task.objects.get().assignee, self.other)
 
         listed = self.client.get("/api/tasks/")
-        self.assertEqual(listed.data, [])
+        self.assertEqual(listed.data["results"], [])
 
     def test_create_task_in_multiple_projects(self):
         website = Project.objects.create(name="Website", created_by=self.user)
@@ -88,8 +88,9 @@ class TaskAPITests(APITestCase):
         response = self.client.get("/api/tasks/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]["title"], "Alice task")
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(len(response.data["results"]), 1)
+        self.assertEqual(response.data["results"][0]["title"], "Alice task")
 
     def test_get_assigned_task(self):
         task = Task.objects.create(title="Alice task", assignee=self.user)
@@ -136,3 +137,53 @@ class TaskAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(Task.objects.count(), 1)
+
+    def test_list_paginates_ten_tasks_at_a_time(self):
+        for index in range(1, 12):
+            Task.objects.create(title=f"seed{index}", assignee=self.user)
+
+        first = self.client.get("/api/tasks/")
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data["count"], 11)
+        self.assertEqual(len(first.data["results"]), 10)
+        self.assertIsNotNone(first.data["next"])
+        self.assertIsNone(first.data["previous"])
+
+        second = self.client.get("/api/tasks/?page=2")
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(second.data["results"]), 1)
+        self.assertIsNone(second.data["next"])
+        self.assertIsNotNone(second.data["previous"])
+
+        first_ids = [task["id"] for task in first.data["results"]]
+        second_ids = [task["id"] for task in second.data["results"]]
+        self.assertEqual(len(set(first_ids + second_ids)), 11)
+
+    def test_list_pages_do_not_repeat_tasks_with_the_same_timestamp(self):
+        Task.objects.bulk_create(
+            Task(title=f"seed{index}", assignee=self.user)
+            for index in range(1, 41)
+        )
+
+        seen = []
+        for page in (1, 2, 3, 4):
+            response = self.client.get(f"/api/tasks/?page={page}")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            titles = [task["title"] for task in response.data["results"]]
+            seen.extend(titles)
+
+        self.assertEqual(len(seen), 40)
+        self.assertEqual(len(set(seen)), 40)
+
+    def test_list_can_filter_by_status(self):
+        Task.objects.create(title="Ready", assignee=self.user, status=Task.Status.NEW)
+        Task.objects.create(
+            title="Working",
+            assignee=self.user,
+            status=Task.Status.IN_PROGRESS,
+        )
+
+        response = self.client.get("/api/tasks/?status=in_progress")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["title"], "Working")

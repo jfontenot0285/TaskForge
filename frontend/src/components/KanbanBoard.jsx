@@ -1,6 +1,6 @@
 import { EditOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { useDraggable, useDroppable, DndContext, PointerSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export const COLUMNS = [
   { id: 'new', title: 'New' },
@@ -23,6 +23,71 @@ function useStackedBoard() {
   }, [])
 
   return stacked
+}
+
+const PAGE_SLOT = 32
+
+function range(start, end) {
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+}
+
+function pageItems(current, total, maxSlots) {
+  if (maxSlots >= total) {
+    return range(1, total)
+  }
+  if (maxSlots <= 1) {
+    return [current]
+  }
+  if (maxSlots === 2) {
+    return current === 1 ? [1, total] : [current, total]
+  }
+
+  const windowSize = maxSlots - 2
+  if (current <= windowSize) {
+    return [...range(1, windowSize), 'ellipsis', total]
+  }
+
+  const endStart = total - windowSize + 1
+  if (current >= endStart) {
+    return [1, 'ellipsis', ...range(endStart, total)]
+  }
+
+  const middleSize = Math.max(1, maxSlots - 4)
+  let start = current - Math.floor((middleSize - 1) / 2)
+  let end = start + middleSize - 1
+  if (start < 2) {
+    start = 2
+    end = start + middleSize - 1
+  }
+  if (end > total - 1) {
+    end = total - 1
+    start = end - middleSize + 1
+  }
+  return [1, 'ellipsis-start', ...range(start, end), 'ellipsis-end', total]
+}
+
+function usePageSlots() {
+  const ref = useRef(null)
+  const [slots, setSlots] = useState(Number.POSITIVE_INFINITY)
+
+  useEffect(() => {
+    const node = ref.current
+    if (!node) {
+      return undefined
+    }
+
+    function measure() {
+      const width = node.clientWidth
+      setSlots(Math.max(1, Math.floor((width + 4) / PAGE_SLOT)))
+    }
+
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
+  return { ref, slots }
 }
 
 function TaskCard({ task, stacked, onOpen, onMove }) {
@@ -107,8 +172,11 @@ function TaskCard({ task, stacked, onOpen, onMove }) {
   )
 }
 
-function Column({ column, tasks, stacked, onOpen, onMove }) {
+function Column({ column, tasks, count, page, stacked, onOpen, onMove, onPageChange }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id, disabled: stacked })
+  const { ref: pagesRef, slots } = usePageSlots()
+  const pageCount = Math.max(1, Math.ceil(count / 10))
+  const visiblePages = pageItems(page, pageCount, slots)
 
   return (
     <section
@@ -117,7 +185,7 @@ function Column({ column, tasks, stacked, onOpen, onMove }) {
     >
       <header>
         <h2>{column.title}</h2>
-        <span>{tasks.length}</span>
+        <span>{count}</span>
       </header>
       <div className="kanban-column__list">
         {tasks.map((task) => (
@@ -130,15 +198,59 @@ function Column({ column, tasks, stacked, onOpen, onMove }) {
           />
         ))}
       </div>
+      {count > 10 ? (
+        <nav className="kanban-column__pager" aria-label={`${column.title} pages`}>
+          <button
+            type="button"
+            className="kanban-column__page"
+            aria-label={`Previous ${column.title} page`}
+            disabled={page <= 1}
+            onClick={() => onPageChange(column.id, page - 1)}
+          >
+            <LeftOutlined />
+          </button>
+          <ol className="kanban-column__pages" ref={pagesRef}>
+            {visiblePages.map((item) => (
+              <li key={item}>
+                {String(item).startsWith('ellipsis') ? (
+                  <span className="kanban-column__ellipsis" aria-hidden="true">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className={`kanban-column__page-number${item === page ? ' kanban-column__page-number--current' : ''}`}
+                    aria-label={`${column.title} page ${item}`}
+                    aria-current={item === page ? 'page' : undefined}
+                    onClick={() => onPageChange(column.id, item)}
+                  >
+                    {item}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ol>
+          <button
+            type="button"
+            className="kanban-column__page"
+            aria-label={`Next ${column.title} page`}
+            disabled={page >= pageCount}
+            onClick={() => onPageChange(column.id, page + 1)}
+          >
+            <RightOutlined />
+          </button>
+        </nav>
+      ) : null}
     </section>
   )
 }
 
-function KanbanBoard({ tasks, onOpenTask, onMoveTask }) {
+function KanbanBoard({ columns, onOpenTask, onMoveTask, onPageChange }) {
   const stacked = useStackedBoard()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
+  const tasks = COLUMNS.flatMap((column) => columns[column.id]?.results || [])
 
   function handleDragEnd(event) {
     const { active, over } = event
@@ -166,9 +278,12 @@ function KanbanBoard({ tasks, onOpenTask, onMoveTask }) {
           key={column.id}
           column={column}
           stacked={stacked}
-          tasks={tasks.filter((task) => task.status === column.id)}
+          tasks={columns[column.id]?.results || []}
+          count={columns[column.id]?.count || 0}
+          page={columns[column.id]?.page || 1}
           onOpen={onOpenTask}
           onMove={onMoveTask}
+          onPageChange={onPageChange}
         />
       ))}
     </div>

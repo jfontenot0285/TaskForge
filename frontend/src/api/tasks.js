@@ -1,7 +1,11 @@
 import { request } from './client'
 
-export function listTasks() {
-  return request('/api/tasks/')
+export function listTasks({ status, page = 1 } = {}) {
+  const params = new URLSearchParams({ page: String(page) })
+  if (status) {
+    params.set('status', status)
+  }
+  return request(`/api/tasks/?${params}`)
 }
 
 export function createTask(payload) {

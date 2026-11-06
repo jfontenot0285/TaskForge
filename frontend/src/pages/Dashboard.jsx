@@ -1,32 +1,59 @@
 import { PlusOutlined, ThunderboltFilled } from '@ant-design/icons'
 import { Button } from 'antd'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import KanbanBoard from '../components/KanbanBoard'
+import KanbanBoard, { COLUMNS } from '../components/KanbanBoard'
 import TaskModal from '../components/TaskModal'
 import { useAuth } from '../context/AuthContext'
 import { createTask, deleteTask, listTasks, updateTask } from '../api/tasks'
 
+function emptyColumn(page = 1) {
+  return { results: [], count: 0, page }
+}
+
+function emptyBoard() {
+  return {
+    new: emptyColumn(),
+    in_progress: emptyColumn(),
+    done: emptyColumn(),
+  }
+}
+
 function Dashboard() {
   const { user, logout } = useAuth()
-  const [tasks, setTasks] = useState([])
+  const [columns, setColumns] = useState(emptyBoard)
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [activeTask, setActiveTask] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
+  const loadColumn = useCallback(async (status, page = 1) => {
+    try {
+      const data = await listTasks({ status, page })
+      setColumns((current) => ({
+        ...current,
+        [status]: {
+          results: data.results,
+          count: data.count,
+          page,
+        },
+      }))
+    } catch {
+      if (page > 1) {
+        await loadColumn(status, page - 1)
+      }
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
-    async function loadTasks() {
+    async function loadBoard() {
       try {
-        const data = await listTasks()
-        if (!cancelled) {
-          setTasks(data)
-        }
+        await Promise.all(COLUMNS.map((column) => loadColumn(column.id, 1)))
       } catch {
         if (!cancelled) {
-          setTasks([])
+          setColumns(emptyBoard())
         }
       } finally {
         if (!cancelled) {
@@ -35,11 +62,11 @@ function Dashboard() {
       }
     }
 
-    loadTasks()
+    loadBoard()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [loadColumn])
 
   function openCreate() {
     setActiveTask(null)
@@ -60,16 +87,19 @@ function Dashboard() {
     setSubmitting(true)
     try {
       if (activeTask) {
-        const updated = await updateTask(activeTask.id, values)
-        setTasks((current) =>
-          current.map((task) => (task.id === updated.id ? updated : task)),
-        )
+        const previousStatus = activeTask.status
+        await updateTask(activeTask.id, values)
+        const nextStatus = values.status || previousStatus
+        await loadColumn(previousStatus, columns[previousStatus].page)
+        if (nextStatus !== previousStatus) {
+          await loadColumn(nextStatus, columns[nextStatus].page)
+        }
       } else {
-        const created = await createTask({
+        await createTask({
           ...values,
           status: 'new',
         })
-        setTasks((current) => [created, ...current])
+        await loadColumn('new', 1)
       }
       closeModal()
     } finally {
@@ -83,8 +113,9 @@ function Dashboard() {
     }
     setSubmitting(true)
     try {
+      const status = activeTask.status
       await deleteTask(activeTask.id)
-      setTasks((current) => current.filter((task) => task.id !== activeTask.id))
+      await loadColumn(status, columns[status].page)
       closeModal()
     } finally {
       setSubmitting(false)
@@ -92,17 +123,24 @@ function Dashboard() {
   }
 
   async function handleMoveTask(id, status) {
-    const previous = tasks
-    setTasks((current) =>
-      current.map((task) => (task.id === id ? { ...task, status } : task)),
+    const currentTask = COLUMNS.flatMap((column) => columns[column.id].results).find(
+      (task) => task.id === id,
     )
+    if (!currentTask || currentTask.status === status) {
+      return
+    }
+    const fromStatus = currentTask.status
     try {
-      const updated = await updateTask(id, { status })
-      setTasks((current) =>
-        current.map((task) => (task.id === updated.id ? updated : task)),
-      )
+      await updateTask(id, { status })
+      await Promise.all([
+        loadColumn(fromStatus, columns[fromStatus].page),
+        loadColumn(status, columns[status].page),
+      ])
     } catch {
-      setTasks(previous)
+      await Promise.all([
+        loadColumn(fromStatus, columns[fromStatus].page),
+        loadColumn(status, columns[status].page),
+      ])
     }
   }
 
@@ -131,7 +169,12 @@ function Dashboard() {
         {loading ? (
           <p className="dashboard__loading">Loading tasks...</p>
         ) : (
-          <KanbanBoard tasks={tasks} onOpenTask={openTask} onMoveTask={handleMoveTask} />
+          <KanbanBoard
+            columns={columns}
+            onOpenTask={openTask}
+            onMoveTask={handleMoveTask}
+            onPageChange={loadColumn}
+          />
         )}
       </main>
 
