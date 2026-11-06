@@ -66,7 +66,6 @@ function TaskModal({ open, task, submitting, onCancel, onSave, onDelete }) {
         <Form.Item
           label="Details"
           name="description"
-          extra="Write it as a requirement: As a ... I want to ... So that ..."
         >
           <Input.TextArea rows={6} placeholder={STORY_TEMPLATE} />
         </Form.Item>

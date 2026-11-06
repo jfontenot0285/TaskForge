@@ -1,6 +1,6 @@
 import { PlusOutlined, ThunderboltFilled } from '@ant-design/icons'
 import { Button } from 'antd'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import KanbanBoard, { COLUMNS, KanbanSkeleton } from '../components/KanbanBoard'
 import TaskModal from '../components/TaskModal'
@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { createTask, deleteTask, listTasks, updateTask } from '../api/tasks'
 
 function emptyColumn(page = 1) {
-  return { results: [], count: 0, page }
+  return { results: [], count: 0, page, sort: 'created_at', order: 'desc' }
 }
 
 function emptyBoard() {
@@ -22,25 +22,33 @@ function emptyBoard() {
 function Dashboard() {
   const { user, logout } = useAuth()
   const [columns, setColumns] = useState(emptyBoard)
+  const columnsRef = useRef(columns)
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [activeTask, setActiveTask] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const loadColumn = useCallback(async (status, page = 1) => {
+  columnsRef.current = columns
+
+  const loadColumn = useCallback(async (status, page = 1, options = {}) => {
+    const current = columnsRef.current[status] || {}
+    const sort = options.sort ?? current.sort ?? 'created_at'
+    const order = options.order ?? current.order ?? 'desc'
     try {
-      const data = await listTasks({ status, page })
-      setColumns((current) => ({
-        ...current,
+      const data = await listTasks({ status, page, sort, order })
+      setColumns((board) => ({
+        ...board,
         [status]: {
           results: data.results,
           count: data.count,
           page,
+          sort,
+          order,
         },
       }))
     } catch {
       if (page > 1) {
-        await loadColumn(status, page - 1)
+        await loadColumn(status, page - 1, { sort, order })
       }
     }
   }, [])
@@ -144,6 +152,14 @@ function Dashboard() {
     }
   }
 
+  function handleSortChange(status, next) {
+    const current = columnsRef.current[status] || {}
+    loadColumn(status, 1, {
+      sort: next.sort ?? current.sort,
+      order: next.order ?? current.order,
+    })
+  }
+
   return (
     <div className="dashboard">
       <div className="landing__aurora" aria-hidden="true" />
@@ -174,6 +190,7 @@ function Dashboard() {
             onOpenTask={openTask}
             onMoveTask={handleMoveTask}
             onPageChange={loadColumn}
+            onSortChange={handleSortChange}
           />
         )}
       </main>

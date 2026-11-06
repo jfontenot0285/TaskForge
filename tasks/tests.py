@@ -187,3 +187,57 @@ class TaskAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["title"], "Working")
+
+    def test_list_can_sort_by_name(self):
+        Task.objects.create(title="Charlie", assignee=self.user)
+        Task.objects.create(title="Alpha", assignee=self.user)
+        Task.objects.create(title="Bravo", assignee=self.user)
+
+        ascending = self.client.get("/api/tasks/?sort=name&order=asc")
+        self.assertEqual(ascending.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [task["title"] for task in ascending.data["results"]],
+            ["Alpha", "Bravo", "Charlie"],
+        )
+
+        descending = self.client.get("/api/tasks/?sort=name&order=desc")
+        self.assertEqual(descending.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [task["title"] for task in descending.data["results"]],
+            ["Charlie", "Bravo", "Alpha"],
+        )
+
+    def test_list_can_sort_by_priority(self):
+        Task.objects.create(title="Low", assignee=self.user, priority=Task.Priority.LOW)
+        Task.objects.create(
+            title="High",
+            assignee=self.user,
+            priority=Task.Priority.HIGH,
+        )
+        Task.objects.create(
+            title="Medium",
+            assignee=self.user,
+            priority=Task.Priority.MEDIUM,
+        )
+
+        ascending = self.client.get("/api/tasks/?sort=priority&order=asc")
+        self.assertEqual(ascending.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [task["title"] for task in ascending.data["results"]],
+            ["Low", "Medium", "High"],
+        )
+
+        descending = self.client.get("/api/tasks/?sort=priority&order=desc")
+        self.assertEqual(descending.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [task["title"] for task in descending.data["results"]],
+            ["High", "Medium", "Low"],
+        )
+
+    def test_list_rejects_invalid_sort(self):
+        response = self.client.get("/api/tasks/?sort=bogus")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_list_rejects_invalid_order(self):
+        response = self.client.get("/api/tasks/?sort=name&order=sideways")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

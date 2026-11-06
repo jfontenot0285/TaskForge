@@ -1,7 +1,16 @@
 import { request } from './client'
 
-export function listTasks({ status, page = 1 } = {}) {
-  const params = new URLSearchParams({ page: String(page) })
+export function listTasks({
+  status,
+  page = 1,
+  sort = 'created_at',
+  order = 'desc',
+} = {}) {
+  const params = new URLSearchParams({
+    page: String(page),
+    sort,
+    order,
+  })
   if (status) {
     params.set('status', status)
   }

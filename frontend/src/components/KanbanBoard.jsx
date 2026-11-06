@@ -1,6 +1,19 @@
 import { EditOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons'
 import { useDraggable, useDroppable, DndContext, PointerSensor, closestCorners, useSensor, useSensors } from '@dnd-kit/core'
+import { Select } from 'antd'
 import { useEffect, useRef, useState } from 'react'
+
+const SORT_OPTIONS = [
+  { value: 'created_at', label: 'Created at' },
+  { value: 'name', label: 'Name' },
+  { value: 'id', label: 'ID' },
+  { value: 'priority', label: 'Priority' },
+]
+
+const ORDER_OPTIONS = [
+  { value: 'asc', label: 'Ascending' },
+  { value: 'desc', label: 'Descending' },
+]
 
 export const COLUMNS = [
   { id: 'new', title: 'New' },
@@ -26,6 +39,21 @@ function useStackedBoard() {
 }
 
 const PAGE_SLOT = 32
+
+function formatCreatedAt(value) {
+  if (!value) {
+    return ''
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
 
 function range(start, end) {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index)
@@ -111,7 +139,15 @@ function TaskCard({ task, stacked, onOpen, onMove }) {
       {...dragProps}
     >
       <div className="task-card__top">
-        <h3>{task.title}</h3>
+        <div className="task-card__title-row">
+          <h3>{task.title}</h3>
+          <span className="task-card__created-meta">
+            <span className="task-card__created-label">Created</span>
+            <time className="task-card__created" dateTime={task.created_at}>
+              {formatCreatedAt(task.created_at)}
+            </time>
+          </span>
+        </div>
         <span className="task-card__priority-meta">
           <span className="task-card__priority-label">Priority</span>
           <span className={`task-card__priority task-card__priority--${task.priority}`}>
@@ -172,7 +208,19 @@ function TaskCard({ task, stacked, onOpen, onMove }) {
   )
 }
 
-function Column({ column, tasks, count, page, stacked, onOpen, onMove, onPageChange }) {
+function Column({
+  column,
+  tasks,
+  count,
+  page,
+  sort,
+  order,
+  stacked,
+  onOpen,
+  onMove,
+  onPageChange,
+  onSortChange,
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id, disabled: stacked })
   const { ref: pagesRef, slots } = usePageSlots()
   const pageCount = Math.max(1, Math.ceil(count / 10))
@@ -184,8 +232,33 @@ function Column({ column, tasks, count, page, stacked, onOpen, onMove, onPageCha
       className={`kanban-column ${isOver ? 'kanban-column--over' : ''}`}
     >
       <header>
-        <h2>{column.title}</h2>
-        <span>{count}</span>
+        <div className="kanban-column__heading">
+          <h2>{column.title}</h2>
+          <span className="kanban-column__count">{count}</span>
+        </div>
+        <div className="kanban-column__sort">
+          <label>
+            <span>Sort</span>
+            <Select
+              size="small"
+              value={sort}
+              options={SORT_OPTIONS}
+              onChange={(value) => onSortChange(column.id, { sort: value })}
+              popupMatchSelectWidth={false}
+              aria-label={`Sort ${column.title}`}
+              onPointerDown={(event) => event.stopPropagation()}
+            />
+          </label>
+          <Select
+            size="small"
+            value={order}
+            options={ORDER_OPTIONS}
+            onChange={(value) => onSortChange(column.id, { order: value })}
+            popupMatchSelectWidth={false}
+            aria-label={`${column.title} sort direction`}
+            onPointerDown={(event) => event.stopPropagation()}
+          />
+        </div>
       </header>
       <div className="kanban-column__list">
         {tasks.map((task) => (
@@ -245,7 +318,7 @@ function Column({ column, tasks, count, page, stacked, onOpen, onMove, onPageCha
   )
 }
 
-function KanbanBoard({ columns, onOpenTask, onMoveTask, onPageChange }) {
+function KanbanBoard({ columns, onOpenTask, onMoveTask, onPageChange, onSortChange }) {
   const stacked = useStackedBoard()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -281,9 +354,12 @@ function KanbanBoard({ columns, onOpenTask, onMoveTask, onPageChange }) {
           tasks={columns[column.id]?.results || []}
           count={columns[column.id]?.count || 0}
           page={columns[column.id]?.page || 1}
+          sort={columns[column.id]?.sort || 'created_at'}
+          order={columns[column.id]?.order || 'desc'}
           onOpen={onOpenTask}
           onMove={onMoveTask}
           onPageChange={onPageChange}
+          onSortChange={onSortChange}
         />
       ))}
     </div>

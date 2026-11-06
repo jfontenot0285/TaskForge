@@ -626,7 +626,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 12px;
+}
+
+.kanban-column__heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .kanban-column h2 {
@@ -638,9 +646,43 @@
   color: #9fd4ff;
 }
 
+.kanban-column__count,
 .kanban-column header span {
   color: #7aa3cc;
   font-size: 12px;
+}
+
+.kanban-column__sort {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  color: #7aa3cc;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kanban-column__sort label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kanban-column__sort .ant-select {
+  min-width: 104px;
+}
+
+.kanban-column__sort .ant-select-selector {
+  background: #10233c !important;
+  border-color: rgba(61, 158, 255, 0.35) !important;
+  color: #e8f3ff !important;
+}
+
+.kanban-column__sort .ant-select-selection-item,
+.kanban-column__sort .ant-select-arrow {
+  color: #8fd0ff !important;
 }
 
 .kanban-column__list {
@@ -742,6 +784,14 @@
   gap: 8px;
 }
 
+.task-card__title-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-width: 0;
+}
+
 .task-card h3 {
   margin: 0;
   color: #e8f3ff;
@@ -787,6 +837,26 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
+}
+
+.task-card__created-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.task-card__created-label {
+  color: #7aa3cc;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.task-card__created {
+  color: #9db8d9;
+  font-size: 11px;
 }
 
 .task-card__stepper {
