@@ -577,9 +577,27 @@
   padding: 0 24px 24px;
 }
 
-.dashboard__loading {
-  text-align: center;
-  color: #9db8d9;
+.kanban-column--pulse {
+  animation: kanban-column-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes kanban-column-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    border-color: rgba(61, 158, 255, 0.18);
+  }
+  50% {
+    opacity: 1;
+    border-color: rgba(61, 158, 255, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanban-column--pulse {
+    animation: none;
+    opacity: 0.7;
+  }
 }
 
 .kanban {

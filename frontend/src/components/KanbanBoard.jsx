@@ -300,4 +300,24 @@ function KanbanBoard({ columns, onOpenTask, onMoveTask, onPageChange }) {
   )
 }
 
+export function KanbanSkeleton() {
+  const stacked = useStackedBoard()
+
+  return (
+    <div
+      className={`kanban${stacked ? ' kanban--stacked' : ''}`}
+      aria-busy="true"
+      aria-label="Loading tasks"
+    >
+      {COLUMNS.map((column) => (
+        <section key={column.id} className="kanban-column kanban-column--pulse">
+          <header>
+            <h2>{column.title}</h2>
+          </header>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 export default KanbanBoard

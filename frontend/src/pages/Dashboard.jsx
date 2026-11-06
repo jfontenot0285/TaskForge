@@ -2,7 +2,7 @@ import { PlusOutlined, ThunderboltFilled } from '@ant-design/icons'
 import { Button } from 'antd'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import KanbanBoard, { COLUMNS } from '../components/KanbanBoard'
+import KanbanBoard, { COLUMNS, KanbanSkeleton } from '../components/KanbanBoard'
 import TaskModal from '../components/TaskModal'
 import { useAuth } from '../context/AuthContext'
 import { createTask, deleteTask, listTasks, updateTask } from '../api/tasks'
@@ -167,7 +167,7 @@ function Dashboard() {
 
       <main className="dashboard__board">
         {loading ? (
-          <p className="dashboard__loading">Loading tasks...</p>
+          <KanbanSkeleton />
         ) : (
           <KanbanBoard
             columns={columns}
