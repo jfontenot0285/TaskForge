@@ -1,70 +1,13 @@
-from django.contrib.auth import authenticate, get_user_model
 from rest_framework import serializers
 
-from .models import Task
-
-User = get_user_model()
+from .models import Project
 
 
-class TaskSerializer(serializers.ModelSerializer):
+class ProjectSerializer(serializers.ModelSerializer):
     id = serializers.CharField(read_only=True)
-    owner = serializers.CharField(source="owner.username", read_only=True)
+    created_by = serializers.CharField(source="created_by.username", read_only=True)
 
     class Meta:
-        model = Task
-        fields = (
-            "id",
-            "title",
-            "description",
-            "status",
-            "owner",
-            "created_at",
-            "updated_at",
-        )
-        read_only_fields = ("id", "owner", "created_at", "updated_at")
-
-
-class UserSerializer(serializers.ModelSerializer):
-    id = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = User
-        fields = ("id", "username")
-
-
-class RegisterSerializer(serializers.Serializer):
-    username = serializers.CharField(max_length=150)
-    password = serializers.CharField(write_only=True)
-
-    def validate_username(self, value):
-        if User.objects.filter(username=value).exists():
-            raise serializers.ValidationError("A user with that username already exists.")
-        return value
-
-    def validate_password(self, value):
-        from django.contrib.auth.password_validation import validate_password
-
-        validate_password(value)
-        return value
-
-    def create(self, validated_data):
-        return User.objects.create_user(
-            username=validated_data["username"],
-            password=validated_data["password"],
-        )
-
-
-class LoginSerializer(serializers.Serializer):
-    username = serializers.CharField()
-    password = serializers.CharField(write_only=True)
-
-    def validate(self, attrs):
-        user = authenticate(
-            request=self.context.get("request"),
-            username=attrs["username"],
-            password=attrs["password"],
-        )
-        if user is None:
-            raise serializers.ValidationError("Invalid username or password.")
-        attrs["user"] = user
-        return attrs
+        model = Project
+        fields = ("id", "name", "description", "created_by", "created_at", "updated_at")
+        read_only_fields = ("id", "created_by", "created_at", "updated_at")
