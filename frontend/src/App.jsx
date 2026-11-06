@@ -6,17 +6,6 @@ import Landing from './pages/Landing'
 import themeConfig from './theme'
 import './App.css'
 
-function GuestRoute({ children }) {
-  const { user, checkingSession } = useAuth()
-  if (checkingSession) {
-    return <div className="boot-screen" />
-  }
-  if (user) {
-    return <Navigate to="/dashboard" replace />
-  }
-  return children
-}
-
 function ProtectedRoute({ children }) {
   const { user, checkingSession } = useAuth()
   if (checkingSession) {
@@ -31,14 +20,7 @@ function ProtectedRoute({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <GuestRoute>
-            <Landing />
-          </GuestRoute>
-        }
-      />
+      <Route path="/" element={<Landing />} />
       <Route
         path="/dashboard"
         element={

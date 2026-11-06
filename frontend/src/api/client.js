@@ -13,11 +13,16 @@ export async function request(path, options = {}) {
     headers['X-CSRFToken'] = token
   }
 
-  const response = await fetch(path, {
-    credentials: 'include',
-    ...options,
-    headers,
-  })
+  let response
+  try {
+    response = await fetch(path, {
+      credentials: 'include',
+      ...options,
+      headers,
+    })
+  } catch {
+    throw new Error('Cannot reach the API. Start Django with manage.py runserver.')
+  }
 
   if (response.status === 204) {
     return null
@@ -29,7 +34,9 @@ export async function request(path, options = {}) {
       data.non_field_errors?.[0] ||
       data.detail ||
       Object.values(data)[0]?.[0] ||
-      'Request failed'
+      (response.status >= 500
+        ? 'Cannot reach the API. Start Django with manage.py runserver.'
+        : 'Request failed')
     throw new Error(message)
   }
   return data

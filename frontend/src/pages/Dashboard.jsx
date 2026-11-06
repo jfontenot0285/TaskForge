@@ -1,6 +1,7 @@
 import { PlusOutlined, ThunderboltFilled } from '@ant-design/icons'
 import { Button } from 'antd'
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import KanbanBoard from '../components/KanbanBoard'
 import TaskModal from '../components/TaskModal'
 import { useAuth } from '../context/AuthContext'
@@ -111,12 +112,12 @@ function Dashboard() {
       <div className="landing__grid" aria-hidden="true" />
 
       <header className="dashboard__top">
-        <div className="brand">
+        <Link to="/" className="brand" aria-label="TaskForge home">
           <span className="brand__mark">
             <ThunderboltFilled />
           </span>
           <span className="brand__name">TaskForge</span>
-        </div>
+        </Link>
         <div className="dashboard__actions">
           <span className="dashboard__user">{user?.username}</span>
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>

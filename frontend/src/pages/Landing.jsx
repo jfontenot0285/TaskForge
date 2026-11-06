@@ -1,6 +1,8 @@
 import { LockOutlined, ThunderboltFilled, UserOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Modal } from 'antd'
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import BoardWalkthrough from '../components/BoardWalkthrough'
 import { useAuth } from '../context/AuthContext'
 
 const passwordRules = [
@@ -13,7 +15,8 @@ const passwordRules = [
 ]
 
 function Landing() {
-  const { login, register } = useAuth()
+  const { user, checkingSession, login, register, logout } = useAuth()
+  const navigate = useNavigate()
   const [loginOpen, setLoginOpen] = useState(false)
   const [registerOpen, setRegisterOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -26,6 +29,7 @@ function Landing() {
       await login(values.username, values.password)
       setLoginOpen(false)
       loginForm.resetFields()
+      navigate('/dashboard')
     } catch (error) {
       loginForm.setFields([
         {
@@ -44,6 +48,7 @@ function Landing() {
       await register(values.username, values.password)
       setRegisterOpen(false)
       registerForm.resetFields()
+      navigate('/dashboard')
     } catch (error) {
       registerForm.setFields([
         {
@@ -56,6 +61,10 @@ function Landing() {
     }
   }
 
+  if (checkingSession) {
+    return <div className="boot-screen" />
+  }
+
   return (
     <div className="landing">
       <div className="landing__aurora" aria-hidden="true" />
@@ -63,17 +72,28 @@ function Landing() {
       <div className="landing__scan" aria-hidden="true" />
 
       <header className="landing__top">
-        <div className="brand">
+        <Link to="/" className="brand" aria-label="TaskForge home">
           <span className="brand__mark">
             <ThunderboltFilled />
           </span>
           <span className="brand__name">TaskForge</span>
-        </div>
+        </Link>
         <div className="landing__actions">
-          <Button onClick={() => setRegisterOpen(true)}>Register</Button>
-          <Button type="primary" onClick={() => setLoginOpen(true)}>
-            Log in
-          </Button>
+          {user ? (
+            <>
+              <Button type="primary" onClick={() => navigate('/dashboard')}>
+                View dashboard
+              </Button>
+              <Button onClick={logout}>Log out</Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={() => setRegisterOpen(true)}>Register</Button>
+              <Button type="primary" onClick={() => setLoginOpen(true)}>
+                Log in
+              </Button>
+            </>
+          )}
         </div>
       </header>
 
@@ -86,16 +106,30 @@ function Landing() {
           </h1>
           <p className="hero__lede">
             A blue-lit workspace for forging projects, assigning work, and
-            driving tasks to done.
+            driving tasks to completion.
           </p>
           <div className="hero__actions">
-            <Button size="large" onClick={() => setRegisterOpen(true)}>
-              Register
-            </Button>
-            <Button type="primary" size="large" onClick={() => setLoginOpen(true)}>
-              Log in
-            </Button>
+            {user ? (
+              <>
+                <Button type="primary" size="large" onClick={() => navigate('/dashboard')}>
+                  View dashboard
+                </Button>
+                <Button size="large" onClick={logout}>
+                  Log out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="large" onClick={() => setRegisterOpen(true)}>
+                  Register
+                </Button>
+                <Button type="primary" size="large" onClick={() => setLoginOpen(true)}>
+                  Log in
+                </Button>
+              </>
+            )}
           </div>
+          <BoardWalkthrough />
         </div>
       </main>
 
